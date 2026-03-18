@@ -34,6 +34,11 @@ document.addEventListener("DOMContentLoaded", () => {
     technology: { label: "Technology", color: "#e8eaf6", textColor: "#3949ab" },
   };
 
+  // School name used for sharing messages (read from page heading)
+  const schoolName =
+    document.querySelector("header h1")?.textContent.trim() ||
+    "Mergington High School";
+
   // State for activities and filters
   let allActivities = {};
   let currentFilter = "all";
@@ -569,12 +574,27 @@ document.addEventListener("DOMContentLoaded", () => {
         `
         }
       </div>
+      <div class="share-section">
+        <span class="share-label">Share:</span>
+        <button class="share-btn" data-platform="twitter" title="Share on Twitter" aria-label="Share on Twitter">🐦</button>
+        <button class="share-btn" data-platform="facebook" title="Share on Facebook" aria-label="Share on Facebook">📘</button>
+        <button class="share-btn" data-platform="whatsapp" title="Share on WhatsApp" aria-label="Share on WhatsApp">💬</button>
+        <button class="share-btn" data-platform="copy" title="Copy link" aria-label="Copy link to clipboard">🔗</button>
+      </div>
     `;
 
     // Add click handlers for delete buttons
     const deleteButtons = activityCard.querySelectorAll(".delete-participant");
     deleteButtons.forEach((button) => {
       button.addEventListener("click", handleUnregister);
+    });
+
+    // Add click handlers for share buttons
+    const shareButtons = activityCard.querySelectorAll(".share-btn");
+    shareButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        shareActivity(button.dataset.platform, name, details.description);
+      });
     });
 
     // Add click handler for register button (only when authenticated)
@@ -797,6 +817,66 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     );
+  }
+
+  // Share activity on social platforms or copy link
+  function shareActivity(platform, activityName, description) {
+    const pageUrl = window.location.href.split("?")[0];
+    const shareUrl = `${pageUrl}?activity=${encodeURIComponent(activityName)}`;
+    const shortDescription =
+      description.length > 100
+        ? description.substring(0, 97) + "..."
+        : description;
+    const shareText = `Check out this activity at ${schoolName}: ${activityName} - ${shortDescription}`;
+
+    switch (platform) {
+      case "twitter":
+        window.open(
+          `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
+          "_blank",
+          "noopener,noreferrer"
+        );
+        break;
+      case "facebook":
+        window.open(
+          `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+          "_blank",
+          "noopener,noreferrer"
+        );
+        break;
+      case "whatsapp":
+        window.open(
+          `https://wa.me/?text=${encodeURIComponent(shareText + " " + shareUrl)}`,
+          "_blank",
+          "noopener,noreferrer"
+        );
+        break;
+      case "copy":
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard
+            .writeText(shareUrl)
+            .then(() => showMessage("Link copied to clipboard!", "success"))
+            .catch(() => copyLinkFallback(shareUrl));
+        } else {
+          copyLinkFallback(shareUrl);
+        }
+        break;
+    }
+  }
+
+  // Fallback copy method for non-HTTPS or unsupported browsers
+  function copyLinkFallback(url) {
+    const tempInput = document.createElement("input");
+    tempInput.value = url;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    try {
+      document.execCommand("copy");
+      showMessage("Link copied to clipboard!", "success");
+    } catch {
+      showMessage("Copy the link: " + url, "info");
+    }
+    document.body.removeChild(tempInput);
   }
 
   // Show message function
